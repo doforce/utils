@@ -1,6 +1,9 @@
-from os import rename, listdir
-import os.path as path
 import argparse
+import shutil
+import os
+from time import time
+
+start_time = time()
 
 parser = argparse.ArgumentParser(description="Rename WireGuard config file")
 parser.add_argument("-d", "--directory",
@@ -9,16 +12,32 @@ args = parser.parse_args()
 
 folder_path = args.directory
 
-if not path.isdir(folder_path):
+if not os.path.isdir(folder_path):
     print(f"{folder_path} not exits")
     exit(1)
 
+files: list[str] = os.listdir(folder_path)
+files = list(filter(lambda x: x.endswith(".conf"), files))
 
-for filename in listdir(folder_path):
-    if "-" in filename:
-        new_filename = filename.replace("-", "")
-        old_filepath = path.join(folder_path, filename)
-        new_filepath = path.join(folder_path, new_filename)
-        rename(old_filepath, new_filepath)
+REGION_DICT = {
+    "NL": "1NL",
+    "US": "2US",
+    "JP": "3JP"
+}
 
-print("Done")
+SORTED_DIR = os.path.join(folder_path, "sorted")
+
+if os.path.exists(SORTED_DIR):
+    shutil.rmtree(SORTED_DIR)
+
+os.mkdir(SORTED_DIR)
+
+
+for filename in files:
+    wg, region, _, id = filename.split("-")
+    new_filename = wg + REGION_DICT[region] + id
+    shutil.copyfile(os.path.join(folder_path, filename),
+                    os.path.join(SORTED_DIR, new_filename))
+
+cost = (time() - start_time) * 1000
+print(f"COST: {cost:.2f} ms")
